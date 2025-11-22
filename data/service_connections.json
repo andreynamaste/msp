@@ -1,0 +1,40 @@
+{
+  "testuser": {
+    "kie": {
+      "testuser_kie_1": {
+        "connection_id": "testuser_kie_1",
+        "connection_name": "My Kie.ai",
+        "api_key": "gAAAAABpIdbNcB1OCQ44dWz-ZBmY1v0eFspVenOfr870rId1765rSvK5jDzRSS2CR5asXMxNJMoSG85YK98FAeXjj6zsyVckvKUZecn_puIdq1nkVJCc7gY=",
+        "description": "Test connection",
+        "created_at": "2025-11-22T15:29:17.708405",
+        "enabled": true,
+        "last_used": null
+      }
+    },
+    "wordstat": {
+      "testuser_wordstat_1": {
+        "connection_id": "testuser_wordstat_1",
+        "connection_name": "My Wordstat",
+        "client_id": "client123",
+        "client_secret": "gAAAAABpIdbNUGuyEqkhJ4iOKIOpB5F4F6IvA0-nnxD0yWbWRjOoopS8Hhfa5PNwVFcYngysKknzV8MGumdDwGNKf3uOBD25Zw==",
+        "redirect_uri": "https://redirect.uri",
+        "description": "Test",
+        "created_at": "2025-11-22T15:29:17.711599",
+        "enabled": true,
+        "last_used": null
+      }
+    },
+    "telegram": {
+      "testuser_telegram_1": {
+        "connection_id": "testuser_telegram_1",
+        "bot_name": "My Bot",
+        "bot_token": "gAAAAABpIdbNKiR1gOTCDm4t0mIf6mo8R_T5XFyr36imddvdc4Qr8M79BijezGjVzQxVvcwdRVaPiY-uWp11zlwGghTYHvlkKQ==",
+        "chat_id": "-1003056881771",
+        "description": "Test bot",
+        "created_at": "2025-11-22T15:29:17.713480",
+        "enabled": true,
+        "last_used": null
+      }
+    }
+  }
+}

@@ -17,6 +17,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sse_starlette import EventSourceResponse, ServerSentEvent
 
+# Import user WordPress connections
+try:
+    from persistent_wordpress_connections import get_all_enabled_connections, update_last_used
+    USER_CONNECTIONS_AVAILABLE = True
+except ImportError:
+    logger.warning("persistent_wordpress_connections not available, using default sites only")
+    USER_CONNECTIONS_AVAILABLE = False
+    get_all_enabled_connections = None
+    update_last_used = None
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -75,12 +85,42 @@ WORDPRESS_PASSWORD = WORDPRESS_SITES[DEFAULT_SITE]["password"]
 wp_clients: Dict[str, Any] = {}
 
 
+def load_all_sites() -> Dict[str, Dict]:
+    """
+    Load all available WordPress sites (default + user connections)
+    
+    Returns:
+        Dictionary of all available sites
+    """
+    all_sites = WORDPRESS_SITES.copy()
+    
+    # Add user connections if available
+    if USER_CONNECTIONS_AVAILABLE and get_all_enabled_connections:
+        try:
+            user_connections = get_all_enabled_connections()
+            for conn_id, conn_data in user_connections.items():
+                all_sites[conn_id] = {
+                    "name": conn_data.get("site_name", "User Site"),
+                    "url": conn_data.get("site_url"),
+                    "username": conn_data.get("wp_username"),
+                    "password": conn_data.get("wp_password"),
+                    "language": conn_data.get("site_language", "en"),
+                    "owner": conn_data.get("owner", "unknown"),
+                    "user_connection": True
+                }
+            logger.info(f"Loaded {len(user_connections)} user WordPress connections")
+        except Exception as e:
+            logger.error(f"Failed to load user connections: {e}")
+    
+    return all_sites
+
+
 def get_wordpress_client(site_id: Optional[str] = None) -> "WordPressMCP":
     """
     Get WordPress client for specified site or default site
     
     Args:
-        site_id: Site ID from WORDPRESS_SITES (optional, uses DEFAULT_SITE if not provided)
+        site_id: Site ID from WORDPRESS_SITES or user connections (optional, uses DEFAULT_SITE if not provided)
     
     Returns:
         WordPressMCP client instance
@@ -88,7 +128,10 @@ def get_wordpress_client(site_id: Optional[str] = None) -> "WordPressMCP":
     if site_id is None:
         site_id = DEFAULT_SITE
     
-    if site_id not in WORDPRESS_SITES:
+    # Load all available sites (including user connections)
+    all_sites = load_all_sites()
+    
+    if site_id not in all_sites:
         logger.warning(f"Site '{site_id}' not found, using default site '{DEFAULT_SITE}'")
         site_id = DEFAULT_SITE
     
@@ -97,14 +140,34 @@ def get_wordpress_client(site_id: Optional[str] = None) -> "WordPressMCP":
         return wp_clients[site_id]
     
     # Create new client
-    site_config = WORDPRESS_SITES[site_id]
+    site_config = all_sites[site_id]
     client = WordPressMCP(
         url=site_config["url"],
         username=site_config["username"],
         password=site_config["password"]
     )
     wp_clients[site_id] = client
+    
+    # Update last_used timestamp for user connections
+    if site_config.get("user_connection") and USER_CONNECTIONS_AVAILABLE and update_last_used:
+        try:
+            owner = site_config.get("owner", "unknown")
+            update_last_used(owner, site_id)
+        except Exception as e:
+            logger.error(f"Failed to update last_used for {site_id}: {e}")
+    
     return client
+
+
+def list_available_sites() -> Dict[str, str]:
+    """
+    Get list of all available WordPress sites
+    
+    Returns:
+        Dictionary mapping site_id to site name
+    """
+    all_sites = load_all_sites()
+    return {site_id: site_data.get("name", site_id) for site_id, site_data in all_sites.items()}
 
 
 class WordPressMCP:
@@ -383,7 +446,7 @@ async def create_post(
         content: Post content in HTML
         excerpt: Post excerpt (optional)
         status: Post status - "publish", "draft", or "private" (default: "publish")
-        site: Site ID to post to (optional). Available sites: "thamini", "dharana", "step", "makego", "yogasystem", "yogaua". If not specified, uses default site.
+        site: Site ID to post to (optional). Use list_sites() to see all available sites including user-added connections. If not specified, uses default site.
     
     Returns:
         JSON string with success status, post_id, url, and message
@@ -393,7 +456,8 @@ async def create_post(
         result = await client.create_post(title, content, excerpt, status)
         if site:
             result["site"] = site
-            result["site_name"] = WORDPRESS_SITES.get(site, {}).get("name", site)
+            all_sites = load_all_sites()
+            result["site_name"] = all_sites.get(site, {}).get("name", site)
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
         logger.error(f"Error creating post: {e}")
@@ -416,7 +480,7 @@ async def update_post(
         title: New post title (optional)
         content: New post content in HTML (optional)
         excerpt: New post excerpt (optional)
-        site: Site ID where the post is located (optional). Available sites: "thamini", "dharana", "step", "makego", "yogasystem", "yogaua". If not specified, uses default site.
+        site: Site ID where the post is located (optional). Use list_sites() to see all available sites including user-added connections. If not specified, uses default site.
     
     Returns:
         JSON string with success status, post_id, url, and message
@@ -426,7 +490,8 @@ async def update_post(
         result = await client.update_post(post_id, title, content, excerpt)
         if site:
             result["site"] = site
-            result["site_name"] = WORDPRESS_SITES.get(site, {}).get("name", site)
+            all_sites = load_all_sites()
+            result["site_name"] = all_sites.get(site, {}).get("name", site)
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
         logger.error(f"Error updating post: {e}")
@@ -445,7 +510,7 @@ async def get_posts(
     Args:
         per_page: Number of posts per page (1-100, default: 10)
         page: Page number (default: 1)
-        site: Site ID to get posts from (optional). Available sites: "thamini", "dharana", "step", "makego", "yogasystem", "yogaua". If not specified, uses default site.
+        site: Site ID to get posts from (optional). Use list_sites() to see all available sites including user-added connections. If not specified, uses default site.
     
     Returns:
         JSON string with success status, posts list, count, and message
@@ -455,7 +520,8 @@ async def get_posts(
         result = await client.get_posts(per_page, page)
         if site:
             result["site"] = site
-            result["site_name"] = WORDPRESS_SITES.get(site, {}).get("name", site)
+            all_sites = load_all_sites()
+            result["site_name"] = all_sites.get(site, {}).get("name", site)
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
         logger.error(f"Error getting posts: {e}")
@@ -469,7 +535,7 @@ async def delete_post(post_id: int, site: Optional[str] = None) -> str:
     
     Args:
         post_id: Post ID to delete (required)
-        site: Site ID where the post is located (optional). Available sites: "thamini", "dharana", "step", "makego", "yogasystem", "yogaua". If not specified, uses default site.
+        site: Site ID where the post is located (optional). Use list_sites() to see all available sites including user-added connections. If not specified, uses default site.
     
     Returns:
         JSON string with success status, post_id, and message
@@ -479,7 +545,8 @@ async def delete_post(post_id: int, site: Optional[str] = None) -> str:
         result = await client.delete_post(post_id)
         if site:
             result["site"] = site
-            result["site_name"] = WORDPRESS_SITES.get(site, {}).get("name", site)
+            all_sites = load_all_sites()
+            result["site_name"] = all_sites.get(site, {}).get("name", site)
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
         logger.error(f"Error deleting post: {e}")
@@ -489,26 +556,36 @@ async def delete_post(post_id: int, site: Optional[str] = None) -> str:
 @mcp.tool()
 async def list_sites() -> str:
     """
-    Get list of available WordPress sites
+    Get list of available WordPress sites (both default and user-added sites)
     
     Returns:
         JSON string with list of available sites with their IDs, names, URLs, and languages
     """
     sites_list = []
-    for site_id, site_config in WORDPRESS_SITES.items():
-        sites_list.append({
+    all_sites = load_all_sites()
+    
+    for site_id, site_config in all_sites.items():
+        site_info = {
             "id": site_id,
-            "name": site_config["name"],
-            "url": site_config["url"],
-            "language": site_config["language"],
-            "is_default": site_id == DEFAULT_SITE
-        })
+            "name": site_config.get("name", site_id),
+            "url": site_config.get("url", ""),
+            "language": site_config.get("language", "en"),
+            "is_default": site_id == DEFAULT_SITE,
+            "user_connection": site_config.get("user_connection", False)
+        }
+        
+        # Add owner info for user connections
+        if site_config.get("user_connection"):
+            site_info["owner"] = site_config.get("owner", "unknown")
+        
+        sites_list.append(site_info)
     
     return json.dumps({
         "success": True,
         "sites": sites_list,
         "default_site": DEFAULT_SITE,
-        "count": len(sites_list)
+        "count": len(sites_list),
+        "user_connections_count": sum(1 for s in sites_list if s.get("user_connection"))
     }, ensure_ascii=False)
 
 
@@ -1104,6 +1181,8 @@ async def mcp_info_get():
             </div>
             
             <div style="text-align: center; margin-top: 30px;">
+                <a href="https://2msp.online/wordpress-mcp-guide.html" class="btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">📚 Полная инструкция</a>
+                <a href="https://2msp.online/video/wordpress-connections" class="btn">⚙️ Управление подключениями</a>
                 <a href="https://2msp.online/mcp-health" class="btn">Health Check</a>
                 <a href="https://2msp.online/" class="btn">Главная</a>
             </div>
