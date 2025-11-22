@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ведическая Астрология - Натальная Карта</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <div class="header-image">
+                    <svg viewBox="0 0 200 200" class="zodiac-wheel">
+                        <circle cx="100" cy="100" r="90" fill="none" stroke="url(#gradient1)" stroke-width="2"/>
+                        <circle cx="100" cy="100" r="70" fill="none" stroke="url(#gradient2)" stroke-width="1"/>
+                        <circle cx="100" cy="100" r="50" fill="none" stroke="url(#gradient1)" stroke-width="1"/>
+                        <text x="100" y="105" text-anchor="middle" font-size="24" fill="#f59e0b" font-family="Noto Sans Devanagari">ॐ</text>
+                        <defs>
+                            <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#ec4899;stop-opacity:1" />
+                            </linearGradient>
+                            <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <h1 class="title">
+                    <span class="om-symbol">ॐ</span>
+                    Ведическая Астрология
+                    <span class="om-symbol">ॐ</span>
+                </h1>
+                <p class="subtitle">Построение натальной карты по системе Джйотиш</p>
+                <p class="subtitle-small">Сидерический зодиак • Сурья Сиддханта аянамша</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Форма ввода данных -->
+            <section class="input-section card" id="inputSection">
+                <h2 class="section-title">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M12 2v20M2 12h20" stroke-width="2"/>
+                    </svg>
+                    Данные рождения
+                </h2>
+                
+                <form id="birthDataForm" class="birth-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="birthDate">Дата рождения</label>
+                            <input type="date" id="birthDate" name="birthDate" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="birthTime">Время рождения</label>
+                            <input type="time" id="birthTime" name="birthTime" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="countrySelect">Страна рождения</label>
+                            <select id="countrySelect" name="countrySelect" required>
+                                <option value="">-- Выберите страну --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="citySelect">Город рождения</label>
+                            <select id="citySelect" name="citySelect" required>
+                                <option value="">-- Сначала выберите страну --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="latitude">Широта</label>
+                            <input type="number" id="latitude" name="latitude" step="0.0001" placeholder="Например: 55.7558" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="longitude">Долгота</label>
+                            <input type="number" id="longitude" name="longitude" step="0.0001" placeholder="Например: 37.6173" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="timezone">
+                                Часовой пояс (UTC)
+                                <input type="checkbox" id="manualTimezone" class="checkbox-toggle">
+                                <span class="checkbox-label">Ручной ввод</span>
+                            </label>
+                            <select id="timezoneSelect" name="timezoneSelect" required>
+                                <option value="">-- Выберите часовой пояс --</option>
+                            </select>
+                            <input type="number" id="timezone" name="timezone" step="0.5" placeholder="Например: +3" style="display: none;" required>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                                <path d="M12 6v6l4 2" stroke-width="2"/>
+                            </svg>
+                            Построить карту
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="resetBtn">
+                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" stroke-width="2"/>
+                                <path d="M21 3v5h-5" stroke-width="2"/>
+                            </svg>
+                            Очистить
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Результаты -->
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <div class="results-header card">
+                    <div class="birth-info">
+                        <h3 id="resultTitle">Натальная карта</h3>
+                        <p id="resultDetails" class="result-details"></p>
+                    </div>
+                    <button class="btn btn-secondary btn-small" id="backBtn">
+                        ← Назад к вводу
+                    </button>
+                </div>
+
+                <div class="chart-container">
+                    <!-- Северная алмазная карта -->
+                    <div class="card chart-card">
+                        <h3 class="section-title">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M12 2l9.09 5.26v10.48L12 23l-9.09-5.26V7.26L12 2z" stroke-width="2"/>
+                            </svg>
+                            Северная карта (Раши)
+                        </h3>
+                        <div class="chart-wrapper">
+                            <canvas id="northChart" width="700" height="700"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Планетарные позиции -->
+                    <div class="card">
+                        <h3 class="section-title">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <circle cx="12" cy="12" r="5" stroke-width="2"/>
+                                <path d="M12 1v6M12 17v6M23 12h-6M7 12H1" stroke-width="2"/>
+                            </svg>
+                            Позиции планет
+                        </h3>
+                        <div id="planetaryPositions" class="planetary-positions"></div>
+                    </div>
+                </div>
+
+                <!-- Трактовки -->
+                <div class="interpretations-container">
+                    <div class="card">
+                        <h3 class="section-title">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke-width="2"/>
+                            </svg>
+                            Астрологические трактовки
+                        </h3>
+                        <div id="interpretations" class="interpretations">
+                            <!-- Трактовки будут загружены динамически в правильном порядке -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>Расчеты на основе Сурья Сиддханта аянамши • Swiss Ephemeris Data</p>
+            <p class="footer-note">Для точной интерпретации рекомендуется консультация с квалифицированным астрологом</p>
+        </footer>
+    </div>
+
+    <script src="js/swisseph.js"></script>
+    <script src="js/atlas.js"></script>
+    <script src="js/calculations.js"></script>
+    <script src="js/chart.js"></script>
+    <script src="js/interpretations.js"></script>
+    <script src="js/app.js"></script>
+    
+    <script>
+        // Обработчик ошибок для отладки
+        window.addEventListener('error', function(e) {
+            console.error('🔴 ГЛОБАЛЬНАЯ ОШИБКА:', e.message);
+            console.error('Файл:', e.filename);
+            console.error('Строка:', e.lineno, 'Колонка:', e.colno);
+            console.error('Объект ошибки:', e.error);
+            
+            // Показываем ошибку на странице
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = 'position:fixed;top:10px;right:10px;background:#ff0000;color:#fff;padding:20px;z-index:999999;max-width:400px;border-radius:8px;';
+            errorDiv.innerHTML = `
+                <h3 style="margin:0 0 10px 0">❌ JavaScript Ошибка</h3>
+                <p style="margin:5px 0"><strong>Сообщение:</strong> ${e.message}</p>
+                <p style="margin:5px 0"><strong>Файл:</strong> ${e.filename}</p>
+                <p style="margin:5px 0"><strong>Строка:</strong> ${e.lineno}:${e.colno}</p>
+                <button onclick="this.parentElement.remove()" style="margin-top:10px;padding:5px 10px;">Закрыть</button>
+            `;
+            document.body.appendChild(errorDiv);
+        });
+        
+        console.log('✅ Все скрипты загружены');
+        console.log('✅ calculateNatalChart:', typeof calculateNatalChart);
+        console.log('✅ generateInterpretations:', typeof generateInterpretations);
+        console.log('✅ CITIES_DATABASE:', typeof CITIES_DATABASE, CITIES_DATABASE ? CITIES_DATABASE.length + ' городов' : 'не определена');
+    </script>
+</body>
+</html>
+

@@ -25,14 +25,86 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ========================================
-# CONFIGURATION - UPDATE THESE VALUES
+# CONFIGURATION - MULTIPLE WORDPRESS SITES
 # ========================================
-WORDPRESS_URL = "https://your-wordpress-site.com/"
-WORDPRESS_USERNAME = "your-username"
-WORDPRESS_PASSWORD = "your-password"
+WORDPRESS_SITES = {
+    "thamini": {
+        "name": "Тхамини Джйотиш (Украина)",
+        "url": "https://online.universl.top/",
+        "username": "admin",
+        "password": "e1mL Qaz7 wHZj HqTD UZ8T xLgo",
+        "language": "uk"
+    },
+    "dharana": {
+        "name": "Дхарна Джйотиш (Русский)",
+        "url": "https://astrog.universl.top/",
+        "username": "admin",
+        "password": "psrR j8kA qWjm dMla ZgzC 7thI",
+        "language": "ru"
+    },
+    "step": {
+        "name": "Степ - Make Автоматизація (Украина)",
+        "url": "https://start.universl.top/",
+        "username": "admin",
+        "password": "usNE Law5 oGYT Llqe J56F LCWN",
+        "language": "uk"
+    },
+    "makego": {
+        "name": "MakeGo - Автоматизация СНГ (Русский)",
+        "url": "https://makego.universl.top/",
+        "username": "admin",
+        "password": "wb5zYRIwyMwzlojNIpSvY9Eb",
+        "language": "ru"
+    },
+    "yogasystem": {
+        "name": "Yoga System - Школа Йоги (Русский)",
+        "url": "https://yogasystem.universl.top/",
+        "username": "admin",
+        "password": "4S50IPpKlmVsJ2PnnQeOz68S",
+        "language": "ru"
+    }
+}
 
-# Global WordPress client instance
-wp_client: Optional[httpx.AsyncClient] = None
+# Default site (for backward compatibility)
+DEFAULT_SITE = "thamini"
+WORDPRESS_URL = WORDPRESS_SITES[DEFAULT_SITE]["url"]
+WORDPRESS_USERNAME = WORDPRESS_SITES[DEFAULT_SITE]["username"]
+WORDPRESS_PASSWORD = WORDPRESS_SITES[DEFAULT_SITE]["password"]
+
+# Global WordPress client instances
+wp_clients: Dict[str, Any] = {}
+
+
+def get_wordpress_client(site_id: Optional[str] = None) -> "WordPressMCP":
+    """
+    Get WordPress client for specified site or default site
+    
+    Args:
+        site_id: Site ID from WORDPRESS_SITES (optional, uses DEFAULT_SITE if not provided)
+    
+    Returns:
+        WordPressMCP client instance
+    """
+    if site_id is None:
+        site_id = DEFAULT_SITE
+    
+    if site_id not in WORDPRESS_SITES:
+        logger.warning(f"Site '{site_id}' not found, using default site '{DEFAULT_SITE}'")
+        site_id = DEFAULT_SITE
+    
+    # Use cached client if available
+    if site_id in wp_clients:
+        return wp_clients[site_id]
+    
+    # Create new client
+    site_config = WORDPRESS_SITES[site_id]
+    client = WordPressMCP(
+        url=site_config["url"],
+        username=site_config["username"],
+        password=site_config["password"]
+    )
+    wp_clients[site_id] = client
+    return client
 
 
 class WordPressMCP:
@@ -300,7 +372,8 @@ async def create_post(
     title: str,
     content: str,
     excerpt: str = "",
-    status: str = "publish"
+    status: str = "publish",
+    site: Optional[str] = None
 ) -> str:
     """
     Create a new WordPress post on your site
@@ -310,15 +383,21 @@ async def create_post(
         content: Post content in HTML
         excerpt: Post excerpt (optional)
         status: Post status - "publish", "draft", or "private" (default: "publish")
+        site: Site ID to post to (optional). Available sites: "thamini", "dharana", "step", "makego", "yogasystem", "yogaua". If not specified, uses default site.
     
     Returns:
         JSON string with success status, post_id, url, and message
     """
-    if not wp_client_instance:
-        return json.dumps({"success": False, "message": "WordPress client not initialized"})
-    
-    result = await wp_client_instance.create_post(title, content, excerpt, status)
-    return json.dumps(result, ensure_ascii=False)
+    try:
+        client = get_wordpress_client(site)
+        result = await client.create_post(title, content, excerpt, status)
+        if site:
+            result["site"] = site
+            result["site_name"] = WORDPRESS_SITES.get(site, {}).get("name", site)
+        return json.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"Error creating post: {e}")
+        return json.dumps({"success": False, "message": str(e)}, ensure_ascii=False)
 
 
 @mcp.tool()
@@ -326,7 +405,8 @@ async def update_post(
     post_id: int,
     title: Optional[str] = None,
     content: Optional[str] = None,
-    excerpt: Optional[str] = None
+    excerpt: Optional[str] = None,
+    site: Optional[str] = None
 ) -> str:
     """
     Update an existing WordPress post
@@ -336,21 +416,28 @@ async def update_post(
         title: New post title (optional)
         content: New post content in HTML (optional)
         excerpt: New post excerpt (optional)
+        site: Site ID where the post is located (optional). Available sites: "thamini", "dharana", "step", "makego", "yogasystem", "yogaua". If not specified, uses default site.
     
     Returns:
         JSON string with success status, post_id, url, and message
     """
-    if not wp_client_instance:
-        return json.dumps({"success": False, "message": "WordPress client not initialized"})
-    
-    result = await wp_client_instance.update_post(post_id, title, content, excerpt)
-    return json.dumps(result, ensure_ascii=False)
+    try:
+        client = get_wordpress_client(site)
+        result = await client.update_post(post_id, title, content, excerpt)
+        if site:
+            result["site"] = site
+            result["site_name"] = WORDPRESS_SITES.get(site, {}).get("name", site)
+        return json.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"Error updating post: {e}")
+        return json.dumps({"success": False, "message": str(e)}, ensure_ascii=False)
 
 
 @mcp.tool()
 async def get_posts(
     per_page: int = 10,
-    page: int = 1
+    page: int = 1,
+    site: Optional[str] = None
 ) -> str:
     """
     Get list of WordPress posts
@@ -358,33 +445,71 @@ async def get_posts(
     Args:
         per_page: Number of posts per page (1-100, default: 10)
         page: Page number (default: 1)
+        site: Site ID to get posts from (optional). Available sites: "thamini", "dharana", "step", "makego", "yogasystem", "yogaua". If not specified, uses default site.
     
     Returns:
         JSON string with success status, posts list, count, and message
     """
-    if not wp_client_instance:
-        return json.dumps({"success": False, "message": "WordPress client not initialized"})
-    
-    result = await wp_client_instance.get_posts(per_page, page)
-    return json.dumps(result, ensure_ascii=False)
+    try:
+        client = get_wordpress_client(site)
+        result = await client.get_posts(per_page, page)
+        if site:
+            result["site"] = site
+            result["site_name"] = WORDPRESS_SITES.get(site, {}).get("name", site)
+        return json.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"Error getting posts: {e}")
+        return json.dumps({"success": False, "message": str(e)}, ensure_ascii=False)
 
 
 @mcp.tool()
-async def delete_post(post_id: int) -> str:
+async def delete_post(post_id: int, site: Optional[str] = None) -> str:
     """
     Delete a WordPress post
     
     Args:
         post_id: Post ID to delete (required)
+        site: Site ID where the post is located (optional). Available sites: "thamini", "dharana", "step", "makego", "yogasystem", "yogaua". If not specified, uses default site.
     
     Returns:
         JSON string with success status, post_id, and message
     """
-    if not wp_client_instance:
-        return json.dumps({"success": False, "message": "WordPress client not initialized"})
+    try:
+        client = get_wordpress_client(site)
+        result = await client.delete_post(post_id)
+        if site:
+            result["site"] = site
+            result["site_name"] = WORDPRESS_SITES.get(site, {}).get("name", site)
+        return json.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"Error deleting post: {e}")
+        return json.dumps({"success": False, "message": str(e)}, ensure_ascii=False)
+
+
+@mcp.tool()
+async def list_sites() -> str:
+    """
+    Get list of available WordPress sites
     
-    result = await wp_client_instance.delete_post(post_id)
-    return json.dumps(result, ensure_ascii=False)
+    Returns:
+        JSON string with list of available sites with their IDs, names, URLs, and languages
+    """
+    sites_list = []
+    for site_id, site_config in WORDPRESS_SITES.items():
+        sites_list.append({
+            "id": site_id,
+            "name": site_config["name"],
+            "url": site_config["url"],
+            "language": site_config["language"],
+            "is_default": site_id == DEFAULT_SITE
+        })
+    
+    return json.dumps({
+        "success": True,
+        "sites": sites_list,
+        "default_site": DEFAULT_SITE,
+        "count": len(sites_list)
+    }, ensure_ascii=False)
 
 
 # Create FastAPI app for additional endpoints (health check, info)
@@ -501,52 +626,64 @@ async def sse_endpoint(request: Request):
                             tools_list = [
                                 {
                                     "name": "create_post",
-                                    "description": "Create a new WordPress post",
+                                    "description": "Create a new WordPress post. You can specify which site to post to using the 'site' parameter. Available sites: thamini (Тхамини Джйотиш, Украина), dharana (Дхарна Джйотиш, Русский), step (Степ - Make Автоматизация, Украина), makego (MakeGo - Автоматизация СНГ, Русский), yogasystem (Yoga System, Русский), yogaua (YogaUA, Украина). If 'site' is not specified, posts to default site (thamini).",
                                     "inputSchema": {
                                         "type": "object",
                                         "properties": {
                                             "title": {"type": "string"},
                                             "content": {"type": "string"},
-                                            "status": {"type": "string", "enum": ["publish", "draft"]}
+                                            "status": {"type": "string", "enum": ["publish", "draft"]},
+                                            "site": {"type": "string", "enum": ["thamini", "dharana", "step", "makego", "yogasystem", "yogaua"], "description": "Site ID to post to (optional)"}
                                         },
                                         "required": ["title", "content"]
                                     }
                                 },
                                 {
                                     "name": "update_post",
-                                    "description": "Update an existing WordPress post",
+                                    "description": "Update an existing WordPress post. Specify 'site' parameter to indicate which site the post is on.",
                                     "inputSchema": {
                                         "type": "object",
                                         "properties": {
                                             "post_id": {"type": "integer"},
                                             "title": {"type": "string"},
                                             "content": {"type": "string"},
-                                            "status": {"type": "string"}
+                                            "status": {"type": "string"},
+                                            "site": {"type": "string", "enum": ["thamini", "dharana", "step", "makego", "yogasystem", "yogaua"], "description": "Site ID where the post is located (optional)"}
                                         },
                                         "required": ["post_id"]
                                     }
                                 },
                                 {
                                     "name": "get_posts",
-                                    "description": "Get list of WordPress posts",
+                                    "description": "Get list of WordPress posts. Specify 'site' parameter to get posts from a specific site.",
                                     "inputSchema": {
                                         "type": "object",
                                         "properties": {
                                             "per_page": {"type": "integer", "default": 10},
                                             "page": {"type": "integer", "default": 1},
-                                            "status": {"type": "string"}
+                                            "status": {"type": "string"},
+                                            "site": {"type": "string", "enum": ["thamini", "dharana", "step", "makego", "yogasystem", "yogaua"], "description": "Site ID to get posts from (optional)"}
                                         }
                                     }
                                 },
                                 {
                                     "name": "delete_post",
-                                    "description": "Delete a WordPress post",
+                                    "description": "Delete a WordPress post. Specify 'site' parameter to indicate which site the post is on.",
                                     "inputSchema": {
                                         "type": "object",
                                         "properties": {
-                                            "post_id": {"type": "integer"}
+                                            "post_id": {"type": "integer"},
+                                            "site": {"type": "string", "enum": ["thamini", "dharana", "step", "makego", "yogasystem", "yogaua"], "description": "Site ID where the post is located (optional)"}
                                         },
                                         "required": ["post_id"]
+                                    }
+                                },
+                                {
+                                    "name": "list_sites",
+                                    "description": "Get list of all available WordPress sites with their IDs, names, URLs, and languages",
+                                    "inputSchema": {
+                                        "type": "object",
+                                        "properties": {}
                                     }
                                 }
                             ]
@@ -568,17 +705,21 @@ async def sse_endpoint(request: Request):
                             tool_name = data.get("params", {}).get("name")
                             arguments = data.get("params", {}).get("arguments", {})
                             
-                            # Map tool calls to WordPress MCP methods
+                            # Map tool calls to MCP tool functions (which support site parameter)
                             tools_map = {
-                                "create_post": wp_mcp.create_post,
-                                "update_post": wp_mcp.update_post,
-                                "get_posts": wp_mcp.get_posts,
-                                "delete_post": wp_mcp.delete_post
+                                "create_post": create_post,
+                                "update_post": update_post,
+                                "get_posts": get_posts,
+                                "delete_post": delete_post,
+                                "list_sites": list_sites
                             }
                             
                             if tool_name in tools_map:
                                 try:
-                                    result = await tools_map[tool_name](**arguments)
+                                    # Call the MCP tool function directly
+                                    result_str = await tools_map[tool_name](**arguments)
+                                    # Parse JSON result
+                                    result = json.loads(result_str)
                                     response = {
                                         "jsonrpc": "2.0",
                                         "id": data.get("id"),

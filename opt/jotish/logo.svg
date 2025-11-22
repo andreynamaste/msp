@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="bgGrad">
+      <stop offset="0%" style="stop-color:#1a2332"/>
+      <stop offset="100%" style="stop-color:#0a1929"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect fill="url(#bgGrad)" width="200" height="200" rx="10"/>
+  
+  <!-- Decorative mandala -->
+  <circle cx="100" cy="100" r="80" fill="none" stroke="#d4af37" stroke-width="1" opacity="0.3"/>
+  <circle cx="100" cy="100" r="70" fill="none" stroke="#d4af37" stroke-width="0.5" opacity="0.2"/>
+  
+  <!-- Moon and stars -->
+  <path fill="#d4af37" d="M100,20 Q95,25 100,30 Q105,25 100,20" opacity="0.8"/>
+  <circle fill="#d4af37" cx="85" cy="25" r="1.5"/>
+  <circle fill="#d4af37" cx="115" cy="25" r="1.5"/>
+  <circle fill="#d4af37" cx="95" cy="35" r="1"/>
+  <circle fill="#d4af37" cx="105" cy="35" r="1"/>
+  
+  <!-- Simplified Ganesha head -->
+  <ellipse fill="#d4af37" cx="100" cy="95" rx="35" ry="40"/>
+  
+  <!-- Ears -->
+  <ellipse fill="#d4af37" cx="70" cy="85" rx="12" ry="18" opacity="0.9"/>
+  <ellipse fill="#d4af37" cx="130" cy="85" rx="12" ry="18" opacity="0.9"/>
+  
+  <!-- Crown symbol -->
+  <path fill="#d4af37" d="M100,60 L95,70 L105,70 Z" opacity="0.8"/>
+  
+  <!-- Trunk -->
+  <path fill="none" stroke="#d4af37" stroke-width="6" stroke-linecap="round" d="M100,100 Q85,110 85,125 Q85,135 95,135"/>
+  
+  <!-- Eyes -->
+  <circle fill="#0a1929" cx="90" cy="85" r="3"/>
+  <circle fill="#0a1929" cx="110" cy="85" r="3"/>
+  
+  <!-- Tilak mark on forehead -->
+  <ellipse fill="#d4af37" cx="100" cy="75" rx="2" ry="4" opacity="0.9"/>
+</svg>

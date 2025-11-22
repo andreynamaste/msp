@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Scripts Loading</title>
+</head>
+<body>
+    <h1>Testing Scripts</h1>
+    <div id="output"></div>
+    
+    <script src="js/swisseph.js"></script>
+    <script src="js/atlas.js"></script>
+    <script src="js/calculations.js"></script>
+    <script src="js/chart.js"></script>
+    <script src="js/interpretations.js"></script>
+    <script src="js/app.js"></script>
+    
+    <script>
+        const output = document.getElementById('output');
+        const tests = [];
+        
+        // Тест 1: Проверка функций
+        tests.push('calculateNatalChart: ' + (typeof calculateNatalChart !== 'undefined' ? '✅' : '❌'));
+        tests.push('searchCities: ' + (typeof searchCities !== 'undefined' ? '✅' : '❌'));
+        tests.push('getPlanetStrength: ' + (typeof getPlanetStrength !== 'undefined' ? '✅' : '❌'));
+        tests.push('NorthIndianChart: ' + (typeof NorthIndianChart !== 'undefined' ? '✅' : '❌'));
+        tests.push('generateInterpretations: ' + (typeof generateInterpretations !== 'undefined' ? '✅' : '❌'));
+        tests.push('CITIES_DATABASE: ' + (typeof CITIES_DATABASE !== 'undefined' ? '✅ (' + CITIES_DATABASE.length + ' городов)' : '❌'));
+        
+        output.innerHTML = '<pre>' + tests.join('\n') + '</pre>';
+        
+        console.log('=== TEST RESULTS ===');
+        tests.forEach(t => console.log(t));
+    </script>
+</body>
+</html>
+
